@@ -1,8 +1,10 @@
 /*!
  * jQuery Mobile Events
- * by Ben Major (www.ben-major.co.uk)
  *
- * Copyright 2011, Ben Major
+ * @author Ben Major (www.ben-major.co.uk)
+ * @copyright 2011, Ben Major
+ * @license MIT
+ *
  * Licensed under the MIT License:
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -42,8 +44,6 @@
 						  ));
 	
 	var settings = {
-		swipe_h_threshold 	: 50,
-		swipe_v_threshold 	: 50,
 		taphold_threshold 	: 750,
 		doubletap_int		: 500,
 		
@@ -61,7 +61,7 @@
 	};
 	
 	// Add Event shortcuts:
-	$.each(('tapstart tapend tap singletap doubletap taphold swipe swipeup swiperight swipedown swipeleft swipeend scrollstart scrollend orientationchange').split(' '), function(i, name) {
+	$.each( ['tapstart', 'tapend', 'tap', 'singletap', 'doubletap', 'taphold', 'scrollstart', 'scrollend', 'orientationchange'], function(i, name) {
 		$.fn[name] = function(fn)
 		{
 			return fn ? this.bind(name, fn) : this.trigger(name);
@@ -395,161 +395,6 @@
 		}
 	};
 	
-	// swipe Event (also handles swipeup, swiperight, swipedown and swipeleft):
-	$.event.special.swipe = {
-		setup: function() {
-			var thisObject = this,
-			    $this = $(thisObject),
-				started = false,
-			  hasSwiped =  false,
-				originalCoord = { x: 0, y: 0 },
-			    finalCoord    = { x: 0, y: 0 },
-				startEvnt;
-	
-			// Screen touched, store the original coordinate
-			function touchStart(e)
-			{
-				originalCoord.x = (e.originalEvent.targetTouches) ? e.originalEvent.targetTouches[0].pageX : e.pageX;
-				originalCoord.y = (e.originalEvent.targetTouches) ? e.originalEvent.targetTouches[0].pageY : e.pageY;
-				finalCoord.x = originalCoord.x;
-				finalCoord.y = originalCoord.y;
-				started = true;
-				var origEvent = e.originalEvent;
-				// Read event data into our startEvt:
-				startEvnt = {
-					'position': {
-						'x': (settings.touch_capable) ? origEvent.touches[0].screenX : e.screenX,
-						'y': (settings.touch_capable) ? origEvent.touches[0].screenY : e.screenY,
-					},
-					'offset': {
-						'x': (settings.touch_capable) ? origEvent.touches[0].pageX - origEvent.touches[0].target.offsetLeft : e.offsetX,
-						'y': (settings.touch_capable) ? origEvent.touches[0].pageY - origEvent.touches[0].target.offsetTop : e.offsetY,
-					},
-					'time': new Date().getTime(),
-					'target': e.target
-				};
-				
-				// For some reason, we need to add a 100ms pause in order to trigger swiping
-				// on Playbooks:
-				var dt = new Date();
-				while ((new Date()) - dt < 100) { }				
-			}
-			
-			// Store coordinates as finger is swiping
-			function touchMove(e)
-			{
-				finalCoord.x = (e.originalEvent.targetTouches) ? e.originalEvent.targetTouches[0].pageX : e.pageX;
-				finalCoord.y = (e.originalEvent.targetTouches) ? e.originalEvent.targetTouches[0].pageY : e.pageY;
-				window.clearTimeout(settings.hold_timer);
-				
-				var swipedir;
-				
-				// We need to check if the element to which the event was bound contains a data-xthreshold | data-vthreshold:
-				var ele_x_threshold = $this.attr('data-xthreshold'),
-				    ele_y_threshold = $this.attr('data-ythreshold'),
-					    h_threshold = (typeof ele_x_threshold !== 'undefined' && ele_x_threshold !== false && parseInt(ele_x_threshold)) ? parseInt(ele_x_threshold) : settings.swipe_h_threshold,
-						v_threshold = (typeof ele_y_threshold !== 'undefined' && ele_y_threshold !== false && parseInt(ele_y_threshold)) ? parseInt(ele_y_threshold) : settings.swipe_v_threshold;
-				
-				
-				if(originalCoord.y > finalCoord.y && (originalCoord.y - finalCoord.y > v_threshold)) { swipedir = 'swipeup'; }
-				if(originalCoord.x < finalCoord.x && (finalCoord.x - originalCoord.x > h_threshold)) { swipedir = 'swiperight'; }
-				if(originalCoord.y < finalCoord.y && (finalCoord.y - originalCoord.y > v_threshold)) { swipedir = 'swipedown'; }
-				if(originalCoord.x > finalCoord.x && (originalCoord.x - finalCoord.x > h_threshold)) { swipedir = 'swipeleft'; }
-				if(swipedir != undefined && started)
-				{
-					originalCoord.x = 0;
-					originalCoord.y = 0;
-					finalCoord.x = 0;
-					finalCoord.y = 0;
-					started = false;
-					
-					// Read event data into our endEvnt:
-					var origEvent = e.originalEvent;
-					endEvnt = {
-						'position': {
-							'x': (settings.touch_capable) ? origEvent.touches[0].screenX : e.screenX,
-							'y': (settings.touch_capable) ? origEvent.touches[0].screenY : e.screenY,
-						},
-						'offset': {
-							'x': (settings.touch_capable) ? origEvent.touches[0].pageX - origEvent.touches[0].target.offsetLeft : e.offsetX,
-							'y': (settings.touch_capable) ? origEvent.touches[0].pageY - origEvent.touches[0].target.offsetTop : e.offsetY,
-						},
-						'time': new Date().getTime(),
-						'target': e.target
-					};
-					
-					// Calculate the swipe amount (normalized):
-					var xAmount = Math.abs(startEvnt.position.x - endEvnt.position.x),
-					    yAmount = Math.abs(startEvnt.position.y - endEvnt.position.y);
-					
-					var touchData = {
-						'startEvnt': startEvnt,
-						  'endEvnt': endEvnt,
-						'direction': swipedir.replace('swipe', ''),
-						  'xAmount': xAmount,
-						  'yAmount': yAmount,
-						 'duration': endEvnt.time - startEvnt.time 
-					}
-					hasSwiped = true;
-					$this.trigger('swipe', touchData).trigger(swipedir, touchData);
-				}
-			}
-			
-			function touchEnd(e)
-			{
-				if(hasSwiped)
-				{
-					// We need to check if the element to which the event was bound contains a data-xthreshold | data-vthreshold:
-					var ele_x_threshold = $this.attr('data-xthreshold'),
-						ele_y_threshold = $this.attr('data-ythreshold'),
-							h_threshold = (typeof ele_x_threshold !== 'undefined' && ele_x_threshold !== false && parseInt(ele_x_threshold)) ? parseInt(ele_x_threshold) : settings.swipe_h_threshold,
-							v_threshold = (typeof ele_y_threshold !== 'undefined' && ele_y_threshold !== false && parseInt(ele_y_threshold)) ? parseInt(ele_y_threshold) : settings.swipe_v_threshold;
-					
-					var origEvent = e.originalEvent;
-					endEvnt = {
-						'position': {
-							'x': (settings.touch_capable) ? origEvent.changedTouches[0].screenX : e.screenX,
-							'y': (settings.touch_capable) ? origEvent.changedTouches[0].screenY : e.screenY,
-						},
-						'offset': {
-							'x': (settings.touch_capable) ? origEvent.changedTouches[0].pageX - origEvent.changedTouches[0].target.offsetLeft : e.offsetX,
-							'y': (settings.touch_capable) ? origEvent.changedTouches[0].pageY - origEvent.changedTouches[0].target.offsetTop : e.offsetY,
-						},
-						'time': new Date().getTime(),
-						'target': e.target
-					};
-					
-					// Read event data into our endEvnt:
-					if(startEvnt.position.y > endEvnt.position.y && (startEvnt.position.y - endEvnt.position.y > v_threshold)) { swipedir = 'swipeup'; }
-					if(startEvnt.position.x < endEvnt.position.x && (endEvnt.position.x - startEvnt.position.x > h_threshold)) { swipedir = 'swiperight'; }
-					if(startEvnt.position.y < endEvnt.position.y && (endEvnt.position.y - startEvnt.position.y > v_threshold)) { swipedir = 'swipedown'; }
-					if(startEvnt.position.x > endEvnt.position.x && (startEvnt.position.x - endEvnt.position.x > h_threshold)) { swipedir = 'swipeleft'; }
-						
-					// Calculate the swipe amount (normalized):
-					var xAmount = Math.abs(startEvnt.position.x - endEvnt.position.x),
-						yAmount = Math.abs(startEvnt.position.y - endEvnt.position.y);
-					
-					var touchData = {
-						'startEvnt': startEvnt,
-						  'endEvnt': endEvnt,
-						'direction': swipedir.replace('swipe', ''),
-						  'xAmount': xAmount,
-						  'yAmount': yAmount,
-						 'duration': endEvnt.time - startEvnt.time 
-					}
-					$this.trigger('swipeend', touchData);
-				}
-				
-				started = false;
-				hasSwiped = false;
-			}
-			
-			$this.bind(settings.startevent, touchStart);
-			$this.bind(settings.moveevent, touchMove);
-			$this.bind(settings.endevent, touchEnd);
-		}
-	};
-	
 	// scrollstart Event (also handles scrollend):
 	$.event.special.scrollstart = {
 		setup: function() {
@@ -722,11 +567,6 @@
 	// Correctly bind anything we've overloaded:
 	$.each({
 		scrollend: 'scrollstart',
-		swipeup: 'swipe',
-		swiperight: 'swipe',
-		swipedown: 'swipe',
-		swipeleft: 'swipe',
-		swipeend: 'swipe',
 	}, function(e, srcE, touchData) {
 		$.event.special[e] =
 		{
