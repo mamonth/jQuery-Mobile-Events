@@ -245,9 +245,6 @@
                         shakeY  = Math.abs( start_pos.y - end_y ) > settings.tap_tremor,
                         shake   = shakeY || shakeX;
 
-                    console.log( Math.abs( start_pos.x - end_x ), settings.tap_tremor );
-                    console.log( shakeX, shakeY, shake );
-
                     if(origTarget == e.target && started && ((new Date().getTime() - start_time) < settings.taphold_threshold) && !shake )
                     {
                         var origEvent = e.originalEvent;
